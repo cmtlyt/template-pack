@@ -34,6 +34,7 @@ const ignoreProps = [
   'scripts.prepare',
   'scripts.ttmp',
   'scripts.lint',
+  'scripts.release',
   'devDependencies',
   'lint-staged',
 ];
@@ -43,7 +44,6 @@ ignoreProps.forEach((prop) => {
   propPaths.slice(0, -1).forEach(k => (_prop = _prop[k]));
   delete _prop[propPaths.at(-1)!];
 });
-demoPackageJson.scripts.release = 'bumpp && pnpm publish';
 demoPackageJson.scripts.prepublishOnly = 'pnpm test && pnpm build';
 fs.writeFileSync(
   path.resolve(demoPackPath, './package.json'),
@@ -63,7 +63,7 @@ const rootPackageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, './pa
 // 删除转换为多包的脚本命令
 delete rootPackageJson.scripts.ttmp;
 rootPackageJson.scripts.stub = 'pnpm -r --filter="./packages/*" --parallel run stub';
-rootPackageJson.scripts.release = 'pnpm -r --filter="./packages/*" run release';
+rootPackageJson.scripts.release = 'esno ./scripts/release.ts && pnpm -r --filter="./packages/*" publish';
 rootPackageJson.scripts.build = 'pnpm -r --filter="./packages/*" run build';
 rootPackageJson.scripts.changelog = 'pnpm -r --filter="./packages/*" run changelog';
 rootPackageJson.scripts.test = 'vitest';
@@ -92,6 +92,9 @@ fs.writeFileSync(path.resolve(__dirname, './tsconfig.json'), JSON.stringify(root
 // 移动 bump.config.ts 文件
 const bumpConfig = fs.readFileSync(path.resolve(__dirname, './bump.config.ts'), 'utf-8');
 fs.renameSync(path.resolve(__dirname, './bump.config.ts'), path.resolve(demoPackPath, './bump.config.ts'));
+
+// 生成 release 脚本
+fs.writeFileSync(path.resolve(__dirname, './scripts/release.ts'), `import { execSync } from 'node:child_process';\nimport process from 'node:process';\nimport chalk from 'chalk';\nimport { globSync } from 'glob';\n\nfunction execCommand(command: string) {\n  execSync(command, {\n    stdio: [process.stdin, process.stdout, process.stderr],\n  });\n}\n\n(function run() {\n  const packages = globSync('packages/*', { absolute: true });\n\n  for (const pkgPath of packages) {\n    const packageName: string = pkgPath.split('/').pop()!;\n    console.log(chalk.green(\`--- bumpp \${packageName} start ---\`));\n    process.chdir(pkgPath);\n    execCommand('npx bumpp');\n    console.log(chalk.green(\`--- bumpp \${packageName} success ---\`));\n  }\n})();\n`, 'utf-8');
 
 // 生成创建子包的模板
 const gsp = `import fs from 'node:fs';\nimport path from 'node:path';\nimport process from 'node:process';\n\nconst __dirname = process.cwd();\n\nfs.cpSync(path.resolve(__dirname, './template/sub-pack'), path.resolve(__dirname, './packages/sub-package'), { recursive: true });\n`;
