@@ -37,7 +37,7 @@
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "prepublishOnly": "pnpm lint && pnpm test && pnpm build",
     "release": "bumpp",
-    "ttmp": "esno ./scripts/transform-to-multiple-pack.ts"
+    "ttmp": "esno ./scripts/transform-to-multiple-pack.ts && pnpm run lint && rm ./scripts/transform-to-multiple-pack.ts"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^3.12.0",
