@@ -15,6 +15,4 @@ export default defineConfig({
   noVerify: false,
   // 配置要修改版本号的文件
   files: ['package.json'],
-  // 多包项目是否递归修改版本号, true 时不能传递 files 配置
-  recursive: false,
 });

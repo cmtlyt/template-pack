@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -44,7 +45,7 @@ ignoreProps.forEach((prop) => {
   propPaths.slice(0, -1).forEach(k => (_prop = _prop[k]));
   delete _prop[propPaths.at(-1)!];
 });
-demoPackageJson.scripts.prepublishOnly = 'pnpm test && pnpm build';
+demoPackageJson.scripts.prepublishOnly = 'pnpm test && pnpm run changelog && pnpm build';
 fs.writeFileSync(
   path.resolve(demoPackPath, './package.json'),
   JSON.stringify(demoPackageJson, null, 2).replace(/template-pack/g, 'demo-pack'),
@@ -63,14 +64,17 @@ const rootPackageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, './pa
 // 删除转换为多包的脚本命令
 delete rootPackageJson.scripts.ttmp;
 rootPackageJson.scripts.stub = 'pnpm -r --filter="./packages/*" --parallel run stub';
-rootPackageJson.scripts.release = 'esno ./scripts/release.ts && pnpm -r --filter="./packages/*" publish';
+rootPackageJson.scripts.release = 'esno ./scripts/release.ts && pnpm -r --filter="./packages/*" publish --no-git-checks';
 rootPackageJson.scripts.build = 'pnpm -r --filter="./packages/*" run build';
 rootPackageJson.scripts.changelog = 'pnpm -r --filter="./packages/*" run changelog';
 rootPackageJson.scripts.test = 'vitest';
-rootPackageJson.scripts['test:ci'] = 'pnpm -r --filter="./packages/*" run test';
+rootPackageJson.scripts['test:ci'] = 'vitest run';
 rootPackageJson.scripts.gsp = 'esno ./scripts/generate-sub-package.ts';
 delete rootPackageJson.scripts.prepublishOnly;
 fs.writeFileSync(path.resolve(__dirname, './package.json'), JSON.stringify(rootPackageJson, null, 2), 'utf-8');
+
+// 安装其余依赖
+execSync('pnpm add -w -D chalk glob prompts');
 
 // tsconfig.json 处理
 const rootTsconfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, './tsconfig.json'), 'utf-8'));
@@ -89,14 +93,10 @@ delete rootTsconfig.compilerOptions.paths;
 rootTsconfig.include = ['packages/**/*.ts'];
 fs.writeFileSync(path.resolve(__dirname, './tsconfig.json'), JSON.stringify(rootTsconfig, null, 2), 'utf-8');
 
-// 移动 bump.config.ts 文件
-const bumpConfig = fs.readFileSync(path.resolve(__dirname, './bump.config.ts'), 'utf-8');
-fs.renameSync(path.resolve(__dirname, './bump.config.ts'), path.resolve(demoPackPath, './bump.config.ts'));
-
 // 生成 release 脚本
-fs.writeFileSync(path.resolve(__dirname, './scripts/release.ts'), `import { execSync } from 'node:child_process';\nimport process from 'node:process';\nimport chalk from 'chalk';\nimport { globSync } from 'glob';\n\nfunction execCommand(command: string) {\n  execSync(command, {\n    stdio: [process.stdin, process.stdout, process.stderr],\n  });\n}\n\n(function run() {\n  const packages = globSync('packages/*', { absolute: true });\n\n  for (const pkgPath of packages) {\n    const packageName: string = pkgPath.split('/').pop()!;\n    console.log(chalk.green(\`--- bumpp \${packageName} start ---\`));\n    process.chdir(pkgPath);\n    execCommand('npx bumpp');\n    console.log(chalk.green(\`--- bumpp \${packageName} success ---\`));\n  }\n})();\n`, 'utf-8');
+fs.writeFileSync(path.resolve(__dirname, './scripts/release.ts'), `import fs from 'node:fs';\nimport path from 'node:path';\nimport { versionBump } from 'bumpp';\nimport chalk from 'chalk';\nimport { globSync } from 'glob';\nimport prompt from 'prompts';\n\nasync function selectPackage(packages: string[]) {\n  const choices = packages.map((pkg) => {\n    const packageJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));\n    const { name, version } = packageJson;\n    return { title: \`\${name} v\${version}\`, value: { name, cwd: path.dirname(pkg), version } };\n  });\n  const { pkgs } = await prompt({ type: 'autocompleteMultiselect', name: 'pkgs', choices, message: '请选择需要更新版本的包', instructions: false });\n  return pkgs;\n}\n\nasync function patchVersion(cwd: string) {\n  await versionBump({ cwd, commit: false, tag: false, noGitCheck: true, push: false, confirm: false, files: ['package.json'] });\n}\n\n(async function run() {\n  const packages = globSync('packages/**/package.json', { absolute: true, ignore: ['**/node_modules/**'] });\n  const dumpPackages = await selectPackage(packages);\n  if (!dumpPackages || !dumpPackages.length)\n    return;\n  for (const pkgInfo of dumpPackages) {\n    const { cwd, name } = pkgInfo;\n    console.log(chalk.blue(\`--- bumpp \${name} start ---\`));\n    patchVersion(cwd);\n    console.log(chalk.green(\`--- bumpp \${name} success ---\`));\n  }\n})();\n`, 'utf-8');
 
-// 生成创建子包的模板
+// 生成创建子包的脚本
 const gsp = `import fs from 'node:fs';\nimport path from 'node:path';\nimport process from 'node:process';\n\nconst __dirname = process.cwd();\n\nfs.cpSync(path.resolve(__dirname, './template/sub-pack'), path.resolve(__dirname, './packages/sub-package'), { recursive: true });\n`;
 fs.writeFileSync(path.resolve(__dirname, './scripts/generate-sub-package.ts'), gsp, 'utf-8');
 
@@ -115,9 +115,6 @@ fs.writeFileSync(path.resolve(srcDir, './index.ts'), `export const name = 'sub-p
 
 // 生成 build.config.ts 文件
 fs.writeFileSync(path.resolve(sptPath, './build.config.ts'), buildConfig, 'utf-8');
-
-// 生成 bump.config.ts 文件
-fs.writeFileSync(path.resolve(sptPath, './bump.config.ts'), bumpConfig, 'utf-8');
 
 // 生成 LICENSE 文件
 fs.writeFileSync(path.resolve(sptPath, './LICENSE'), fs.readFileSync(path.resolve(__dirname, './LICENSE'), 'utf-8'), 'utf-8');
