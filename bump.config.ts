@@ -15,6 +15,7 @@ export default defineConfig({
   noVerify: false,
   // 配置要修改版本号的文件
   files: ['package.json'],
+  execute: 'git add .',
   // 是否需要确认修改, 传入 true 表示需要确认
   confirm: false,
 });
