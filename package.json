@@ -35,7 +35,7 @@
     "build": "unbuild",
     "test": "vitest run",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
-    "prepublishOnly": "pnpm lint && pnpm test && pnpm build",
+    "prepublishOnly": "pnpm lint && pnpm build && pnpm run changelog && pnpm test",
     "release": "bumpp",
     "ttmp": "pnpm i && esno ./scripts/transform-to-multiple-pack.ts && pnpm i && pnpm run lint && rm ./scripts/transform-to-multiple-pack.ts"
   },
