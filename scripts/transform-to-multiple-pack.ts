@@ -67,10 +67,10 @@ delete rootPackageJson.scripts.ttmp;
 rootPackageJson.scripts.stub = 'pnpm -r --filter="./packages/*" --parallel run stub';
 rootPackageJson.scripts.release = 'esno ./scripts/release.ts && pnpm -r --filter="./packages/*" publish --no-git-checks';
 rootPackageJson.scripts.build = 'pnpm -r --filter="./packages/*" run build';
-rootPackageJson.scripts.changelog = 'pnpm -r --filter="./packages/*" run changelog';
 rootPackageJson.scripts.test = 'vitest';
 rootPackageJson.scripts['test:ci'] = 'vitest run';
 rootPackageJson.scripts.gsp = 'esno ./scripts/generate-sub-package.ts';
+delete rootPackageJson.scripts.changelog;
 delete rootPackageJson.scripts.prepublishOnly;
 fs.writeFileSync(path.resolve(__dirname, './package.json'), JSON.stringify(rootPackageJson, null, 2), 'utf-8');
 
