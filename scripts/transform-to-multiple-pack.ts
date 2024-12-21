@@ -36,6 +36,7 @@ const ignoreProps = [
   'scripts.ttmp',
   'scripts.lint',
   'scripts.release',
+  'scripts.changelog',
   'devDependencies',
   'lint-staged',
 ];
@@ -45,7 +46,7 @@ ignoreProps.forEach((prop) => {
   propPaths.slice(0, -1).forEach(k => (_prop = _prop[k]));
   delete _prop[propPaths.at(-1)!];
 });
-demoPackageJson.scripts.prepublishOnly = 'pnpm test && pnpm run changelog && pnpm build';
+demoPackageJson.scripts.prepublishOnly = 'pnpm build && pnpm test';
 fs.writeFileSync(
   path.resolve(demoPackPath, './package.json'),
   JSON.stringify(demoPackageJson, null, 2).replace(/template-pack/g, 'demo-pack'),
