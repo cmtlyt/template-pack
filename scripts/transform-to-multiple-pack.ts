@@ -94,10 +94,6 @@ delete rootTsconfig.compilerOptions.paths;
 rootTsconfig.include = ['packages/**/*.ts'];
 fs.writeFileSync(path.resolve(__dirname, './tsconfig.json'), JSON.stringify(rootTsconfig, null, 2), 'utf-8');
 
-// 重写 pre-commit 脚本
-const preCommitShell = fs.readFileSync(path.resolve(__dirname, './.husky/pre-commit'), 'utf-8');
-fs.writeFileSync(path.resolve(__dirname, './.husky/pre-commit'), preCommitShell.replace('npm run test', 'npm run test:ci'), 'utf-8');
-
 // 生成 release 脚本
 fs.writeFileSync(path.resolve(__dirname, './scripts/release.ts'), `import fs from 'node:fs';\nimport path from 'node:path';\nimport { versionBump } from 'bumpp';\nimport chalk from 'chalk';\nimport { globSync } from 'glob';\nimport prompt from 'prompts';\n\nasync function selectPackage(packages: string[]) {\n  const choices = packages.map((pkg) => {\n    const packageJson = JSON.parse(fs.readFileSync(pkg, 'utf-8'));\n    const { name, version } = packageJson;\n    return { title: \`\${name} v\${version}\`, value: { name, cwd: path.dirname(pkg), version } };\n  });\n  const { pkgs } = await prompt({ type: 'autocompleteMultiselect', name: 'pkgs', choices, message: '请选择需要更新版本的包', instructions: false });\n  return pkgs;\n}\n\nasync function patchVersion(cwd: string) {\n  await versionBump({ cwd, commit: false, tag: false, noGitCheck: true, push: false, confirm: false, files: ['package.json'] });\n}\n\n(async function run() {\n  const packages = globSync('packages/**/package.json', { absolute: true, ignore: ['**/node_modules/**'] });\n  const dumpPackages = await selectPackage(packages);\n  if (!dumpPackages || !dumpPackages.length)\n    return;\n  for (const pkgInfo of dumpPackages) {\n    const { cwd, name } = pkgInfo;\n    console.log(chalk.blue(\`--- bumpp \${name} start ---\`));\n    await patchVersion(cwd);\n    console.log(chalk.green(\`--- bumpp \${name} success ---\`));\n  }\n})();\n`, 'utf-8');
 
