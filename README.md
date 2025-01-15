@@ -24,6 +24,8 @@
 - 生成子包 **(仅限多包模式可用)** `pnpm run gsp`
 - 正式打包 `pnpm run build`
 
+如果需要修改子包模板的话可以在根目录的 template 的文件夹下调整
+
 commit 的时候会自动进行 stub 测试, 然后在 github actions 流程中会进行 build 测试, 所以测试文件可以直接引用 dist 目录下的内容 **(推荐这么做)**
 
 publish 之前会自动按顺序执行: 代码 lint, 打包, 生成 changelog **(仅单包)**, 测试

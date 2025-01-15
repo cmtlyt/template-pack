@@ -2,11 +2,16 @@
   "name": "template-pack",
   "type": "module",
   "version": "0.2.2",
+  "private": false,
   "packageManager": "pnpm@9.14.4",
   "description": "开箱即用的 npm 包模板",
   "author": {
     "name": "cmtlyt",
     "email": "cmtlyt@163.com"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   },
   "license": "MIT",
   "homepage": "https://github.com/cmtlyt/template-pack#readme",
